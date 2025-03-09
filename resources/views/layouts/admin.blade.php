@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title') - لوحة الإدارة</title>
+    <!-- Bootstrap RTL -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.rtl.min.css">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
@@ -31,6 +33,7 @@
             padding: 20px;
         }
     </style>
+    @yield('styles')
 </head>
 <body>
     <div class="container-fluid">
@@ -43,6 +46,16 @@
                 </a>
                 <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                     <i class="fas fa-users me-2"></i> المستخدمين
+                </a>
+                <a href="{{ route('admin.subscription-plans.index') }}" class="{{ request()->routeIs('admin.subscription-plans.*') ? 'active' : '' }}">
+                    <i class="fas fa-tags me-2"></i> خطط الاشتراك
+                </a>
+    
+                <a href="{{ route('admin.telegram.index') }}" class="{{ request()->routeIs('admin.telegram.*') ? 'active' : '' }}">
+                    <i class="fab fa-telegram-plane me-2"></i> إعدادات تلغرام
+                </a>
+                <a href="{{ route('admin.logs.index') }}" class="{{ request()->routeIs('admin.logs.*') ? 'active' : '' }}">
+                    <i class="fas fa-clipboard-list me-2"></i> السجلات
                 </a>
                 <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt me-2"></i> تسجيل الخروج
@@ -78,6 +91,7 @@
         </div>
     </div>
     
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     @yield('scripts')

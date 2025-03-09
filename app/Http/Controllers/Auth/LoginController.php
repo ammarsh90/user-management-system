@@ -75,7 +75,7 @@ class LoginController extends Controller
     protected function sendFailedLoginResponse(Request $request)
     {
         // تسجيل محاولة الدخول الفاشلة
-        $this->logLogin($request, null, 'failed');
+       // $this->logLogin($request, null, 'failed');
         
         return parent::sendFailedLoginResponse($request);
     }

@@ -114,19 +114,49 @@ class UserProfileController extends Controller
      */
     public function resetHwid(Request $request)
     {
-        $user = auth()->user();
+        $admin = auth()->user();
         
-        // التحقق من وجود اشتراك نشط
-        if (!$user->hasActiveSubscription()) {
-            return redirect()->back()
-                ->with('error', 'You do not have an active subscription');
+        // التحقق من صلاحيات المستخدم (إما مشرف أو بائع)
+        if (!$admin->isAdmin() && !$admin->isSeller()) {
+            abort(403, 'Unauthorized');
         }
 
-        // التحقق من إمكانية إعادة التعيين
-        if (!$user->canResetHwid()) {
-            $timeUntilReset = $user->timeUntilHwidReset();
+        // إذا كان المستخدم بائعًا، يجب التحقق من أنه أنشأ اشتراكًا للمستخدم
+        if ($admin->isSeller()) {
+            $hasSubscription = $admin->sellerSubscriptions()
+                ->where('user_id', $user->id)
+                ->exists();
+                
+            if (!$hasSubscription) {
+                return redirect()->back()
+                    ->with('error', 'You can only reset HWID for users with subscriptions created by you');
+            }
+        }
+
+        // التحقق من وجود اشتراك نشط للمستخدم
+        if (!$user->hasActiveSubscription()) {
             return redirect()->back()
-                ->with('error', "HWID reset not available yet. Please wait {$timeUntilReset} more hours.");
+                ->with('error', 'User does not have an active subscription');
+        }
+
+        $request->validate([
+            'force' => 'sometimes|boolean',
+        ]);
+
+        $force = $request->has('force') && $request->force && $admin->isAdmin();
+        
+        // إذا لم يكن هناك تجاوز من قِبل المشرف، تحقق من إمكانية إعادة التعيين
+        if (!$force && $user->hwid_last_reset) {
+            $resetDelay = SystemSetting::where('key', 'hwid_reset_delay_hours')->first();
+            $delayHours = $resetDelay ? (int)$resetDelay->value : 168; // افتراضي: 7 أيام
+            
+            $hoursElapsed = Carbon::now()->diffInHours($user->hwid_last_reset);
+            
+            if ($hoursElapsed < $delayHours) {
+                $hoursRemaining = $delayHours - $hoursElapsed;
+                return redirect()->back()
+                    ->with('error', "HWID reset not available yet. {$hoursRemaining} hours remaining.");
+            }
         }
 
         // تسجيل عملية إعادة التعيين
@@ -134,8 +164,8 @@ class UserProfileController extends Controller
             'user_id' => $user->id,
             'old_hwid' => $user->hwid,
             'new_hwid' => null, // سيتم تعيينه عند تسجيل الدخول التالي
-            'reset_type' => 'self',
-            'reset_by' => $user->id, // المستخدم نفسه
+            'reset_type' => $force ? 'forced' : 'manual',
+            'reset_by' => $admin->id,
         ]);
 
         // مسح HWID وتسجيل وقت إعادة التعيين
@@ -149,11 +179,11 @@ class UserProfileController extends Controller
             'email' => $user->email,
             'old_hwid' => $user->hwid ?: 'None',
             'new_hwid' => 'Pending',
-            'reset_type' => 'self',
-            'reset_by' => $user->name
+            'reset_type' => $force ? 'forced' : 'manual',
+            'reset_by' => $admin->name
         ]);
 
         return redirect()->back()
-            ->with('success', 'HWID reset successfully. You will need to log in again from the application.');
+            ->with('success', 'HWID reset successfully. User will need to log in again to set a new HWID.');
     }
 }

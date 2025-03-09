@@ -4,9 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-
+use App\Models\User;
+use App\Models\UserSubscription;
+use App\Models\Transaction;
+use App\Models\LoginHistory;
+use App\Models\SystemLog;
+use App\Services\TelegramNotificationService;
+use Carbon\Carbon;
+use App\Models\HwidReset; 
 class UserController extends Controller
 {
     /**
@@ -56,22 +62,28 @@ class UserController extends Controller
 
     /**
      * Display the specified resource.
-     */
+     
     public function show(string $id)
     {
         $user = User::findOrFail($id);
         return view('admin.users.show', compact('user'));
     }
+*/
+public function show($id)
+{
+    $user = User::findOrFail($id);
+    $subscriptions = UserSubscription::where('user_id', $id)->latest()->paginate(5);
+    $transactions = Transaction::where('user_id', $id)->latest()->paginate(5);
+    $loginHistory = LoginHistory::where('user_id', $id)->latest()->paginate(5);
+    
+    return view('admin.users.show', compact('user', 'subscriptions', 'transactions', 'loginHistory'));
+}
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        $user = User::findOrFail($id);
-        return view('admin.users.edit', compact('user'));
-    }
-
+public function edit($id)
+{
+    $user = User::findOrFail($id);
+    return view('admin.users.edit', compact('user'));
+}
     /**
      * Update the specified resource in storage.
      */
@@ -105,6 +117,23 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('success', 'تم تحديث المستخدم بنجاح');
+    }
+    public function resetHWID(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $user->hwid = null;
+        $user->hwid_last_reset = now();
+        $user->save();
+
+        // سجل عملية إعادة التعيين (اختياري)
+        HwidReset::create([
+            'user_id' => $user->id,
+            'reset_by' => User::id(), // أو المعرف المناسب
+            'reset_type' => 'admin',
+            'old_hwid' => $user->hwid,
+        ]);
+
+        return redirect()->back()->with('success', 'HWID has been reset successfully.');
     }
 
     /**

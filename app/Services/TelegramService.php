@@ -108,7 +108,38 @@ class TelegramService
             . "Action: {action}\n"
             . "------------------\n";
     }
+/**
+ * Send direct notification to a specific chat ID
+ *
+ * @param string $chatId
+ * @param string $message
+ * @return bool
+ */
+public static function sendDirectNotification($chatId, $message)
+{
+    try {
+        $telegramBotToken = config('services.telegram.bot_token');
+        
+        if (empty($telegramBotToken)) {
+            throw new \Exception('Telegram bot token is not configured.');
+        }
 
+        $response = Http::post("https://api.telegram.org/bot{$telegramBotToken}/sendMessage", [
+            'chat_id' => $chatId,
+            'text' => $message,
+            'parse_mode' => 'HTML'
+        ]);
+
+        if (!$response->successful()) {
+            throw new \Exception('Failed to send Telegram notification: ' . $response->body());
+        }
+        
+        return true;
+    } catch (\Exception $e) {
+        Log::error('Error sending Telegram notification: ' . $e->getMessage());
+        throw $e;
+    }
+}
     /**
      * إنشاء إعدادات تلجرام افتراضية.
      */
